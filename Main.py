@@ -1,7 +1,17 @@
-import tkinter as tk
-from tkinter import messagebox
+from kivy.app import App
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
+from kivy.uix.checkbox import CheckBox
+from kivy.uix.popup import Popup
+from kivy.uix.scrollview import ScrollView
+from kivy.config import Config
 
-# Function to calculate the area of the sector
+Config.set('graphics', 'width', '400')
+Config.set('graphics', 'height', '400')
+
 def calculate_area(theta, radius):
     try:
         theta = float(theta)
@@ -11,7 +21,6 @@ def calculate_area(theta, radius):
     except ValueError:
         return None
 
-# Function for the step-by-step tutorial
 def tutorial(theta, radius):
     steps = f"1. Use the formula: Area = (θ / 360) * π * r²\n"
     steps += f"2. Plug in the values: θ = {theta}°, r = {radius}\n"
@@ -20,96 +29,165 @@ def tutorial(theta, radius):
     steps += f"4. Result: Area = {area}"
     return steps
 
-# Main application class
-class SectorCalculatorApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Sector Area Calculator")
-        self.create_menu()
+class MenuScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
+        
+        title = Label(text='Sector Area Calculator', font_size=24, size_hint=(1, 0.2))
+        layout.add_widget(title)
+        
+        questions_btn = Button(text='Questions Part', size_hint=(1, 0.3), 
+                             background_color=(1, 1, 0, 1), background_normal='')
+        questions_btn.bind(on_press=self.go_to_questions)
+        layout.add_widget(questions_btn)
+        
+        calculator_btn = Button(text='Calculator Part', size_hint=(1, 0.3), 
+                               background_color=(1, 1, 0, 1), background_normal='')
+        calculator_btn.bind(on_press=self.go_to_calculator)
+        layout.add_widget(calculator_btn)
+        
+        self.add_widget(layout)
+    
+    def go_to_questions(self, instance):
+        self.manager.current = 'question'
+    
+    def go_to_calculator(self, instance):
+        self.manager.current = 'calculator'
 
-    def create_menu(self):
-        self.clear_frame()
-        menu_label = tk.Label(self.root, text="Sector Area Calculator", font=("Arial", 16), bg="yellow", relief="ridge")
-        menu_label.pack(pady=20, ipadx=10, ipady=5)
+class QuestionScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        
+        back_btn = Button(text='Back', size_hint=(None, None), size=(100, 50),
+                         background_normal='')
+        back_btn.bind(on_press=self.go_back)
+        self.layout.add_widget(back_btn)
+        
+        self.question_label = Label(text='Find the area of the sector:', 
+                                   font_size=20, size_hint=(1, 0.2))
+        self.layout.add_widget(self.question_label)
+        
+        self.theta = 60
+        self.radius = 5
+        self.correct_answer = calculate_area(self.theta, self.radius)
+        
+        self.question_text_label = Label(text=f"Given θ = {self.theta}°, r = {self.radius}", 
+                                        font_size=16)
+        self.layout.add_widget(self.question_text_label)
+        
+        self.answer_input = TextInput(hint_text='Enter your answer', 
+                                     size_hint=(1, 0.2), font_size=20, 
+                                     multiline=False)
+        self.layout.add_widget(self.answer_input)
+        
+        confirm_btn = Button(text='Confirm Answer', size_hint=(1, 0.3), 
+                            background_color=(1, 1, 0, 1), background_normal='')
+        confirm_btn.bind(on_press=self.check_answer)
+        self.layout.add_widget(confirm_btn)
+        
+        self.add_widget(self.layout)
+    
+    def on_pre_enter(self, *args):
+        self.answer_input.text = ''
+    
+    def go_back(self, instance):
+        self.manager.current = 'menu'
+    
+    def check_answer(self, instance):
+        user_answer = self.answer_input.text
+        if not user_answer:
+            self.show_popup("Result", "Please enter an answer!")
+        else:
+            try:
+                user_num = float(user_answer)
+                if user_num == self.correct_answer:
+                    msg = "Correct!"
+                else:
+                    msg = f"Incorrect! The correct answer is {self.correct_answer}."
+                self.show_popup("Result", msg)
+            except ValueError:
+                self.show_popup("Error", "Please enter a valid number.")
+    
+    def show_popup(self, title, message):
+        popup = Popup(title=title, content=Label(text=message), 
+                     size_hint=(0.8, 0.4))
+        popup.open()
 
-        question_button = tk.Button(self.root, text="Questions Part", command=self.questions_part, bg="yellow")
-        question_button.pack(pady=10)
+class CalculatorScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        
+        back_btn = Button(text='Back', size_hint=(None, None), size=(100, 50),
+                         background_normal='')
+        back_btn.bind(on_press=self.go_back)
+        self.layout.add_widget(back_btn)
+        
+        theta_label = Label(text="Enter θ (in degrees):", font_size=16)
+        self.layout.add_widget(theta_label)
+        self.theta_input = TextInput(hint_text='Theta', font_size=20, 
+                                    multiline=False)
+        self.layout.add_widget(self.theta_input)
+        
+        radius_label = Label(text="Enter radius:", font_size=16)
+        self.layout.add_widget(radius_label)
+        self.radius_input = TextInput(hint_text='Radius', font_size=20, 
+                                     multiline=False)
+        self.layout.add_widget(self.radius_input)
+        
+        self.tutorial_checkbox = CheckBox(size_hint=(None, None), size=(50, 50))
+        checkbox_layout = BoxLayout(orientation='horizontal', size_hint=(1, 0.2))
+        checkbox_layout.add_widget(Label(text="Show tutorial:"))
+        checkbox_layout.add_widget(self.tutorial_checkbox)
+        self.layout.add_widget(checkbox_layout)
+        
+        self.result_label = Label(text="Area: ", font_size=20, color=(0, 0, 1, 1))
+        self.layout.add_widget(self.result_label)
+        
+        calc_btn = Button(text='Calculate', size_hint=(1, 0.3), 
+                         background_color=(1, 1, 0, 1), background_normal='')
+        calc_btn.bind(on_press=self.calculate)
+        self.layout.add_widget(calc_btn)
+        
+        self.add_widget(self.layout)
+    
+    def go_back(self, instance):
+        self.manager.current = 'menu'
+    
+    def calculate(self, instance):
+        theta = self.theta_input.text
+        radius = self.radius_input.text
+        area = calculate_area(theta, radius)
+        if area is None:
+            self.show_popup("Error", "Please enter valid numeric values!")
+        else:
+            self.result_label.text = f"Area: {area}"
+            if self.tutorial_checkbox.active:
+                steps = tutorial(theta, radius)
+                self.show_tutorial_popup(steps)
+    
+    def show_popup(self, title, message):
+        popup = Popup(title=title, content=Label(text=message), 
+                     size_hint=(0.8, 0.4))
+        popup.open()
+    
+    def show_tutorial_popup(self, steps):
+        scroll = ScrollView()
+        tutorial_label = Label(text=steps, size_hint_y=None, font_size=16)
+        tutorial_label.bind(texture_size=lambda instance, size: setattr(tutorial_label, 'height', size[1]))
+        scroll.add_widget(tutorial_label)
+        popup = Popup(title='Tutorial', content=scroll, size_hint=(0.9, 0.9))
+        popup.open()
 
-        calculator_button = tk.Button(self.root, text="Calculator Part", command=self.calculator_part, bg="yellow")
-        calculator_button.pack(pady=10)
+class SectorCalculatorApp(App):
+    def build(self):
+        sm = ScreenManager()
+        sm.add_widget(MenuScreen(name='menu'))
+        sm.add_widget(QuestionScreen(name='question'))
+        sm.add_widget(CalculatorScreen(name='calculator'))
+        return sm
 
-    def questions_part(self):
-        self.clear_frame()
-        back_button = tk.Button(self.root, text="Back", command=self.create_menu)
-        back_button.pack(anchor="nw", padx=10, pady=10)
-
-        question_label = tk.Label(self.root, text="Find the area of the sector:", font=("Arial", 14), bg="yellow")
-        question_label.pack(pady=20)
-
-        # Generate a sample question
-        theta = 60
-        radius = 5
-        answer = calculate_area(theta, radius)
-        question_text = f"Given θ = {theta}°, r = {radius}"
-        tk.Label(self.root, text=question_text, font=("Arial", 12)).pack(pady=10)
-
-        self.answer_input = tk.Entry(self.root, font=("Arial", 12))
-        self.answer_input.pack(pady=5)
-
-        def check_answer():
-            user_answer = self.answer_input.get()
-            if not user_answer:
-                messagebox.showinfo("Result", "Please enter an answer!")
-            elif float(user_answer) == answer:
-                messagebox.showinfo("Result", "Correct!")
-            else:
-                messagebox.showinfo("Result", f"Incorrect! The correct answer is {answer}.")
-
-        confirm_button = tk.Button(self.root, text="Confirm Answer", command=check_answer, bg="yellow")
-        confirm_button.pack(pady=10)
-
-    def calculator_part(self):
-        self.clear_frame()
-        back_button = tk.Button(self.root, text="Back", command=self.create_menu)
-        back_button.pack(anchor="nw", padx=10, pady=10)
-
-        tk.Label(self.root, text="Enter θ (in degrees):", font=("Arial", 12)).pack(pady=5)
-        theta_input = tk.Entry(self.root, font=("Arial", 12))
-        theta_input.pack(pady=5)
-
-        tk.Label(self.root, text="Enter radius:", font=("Arial", 12)).pack(pady=5)
-        radius_input = tk.Entry(self.root, font=("Arial", 12))
-        radius_input.pack(pady=5)
-
-        result_label = tk.Label(self.root, font=("Arial", 12), fg="blue")
-        result_label.pack(pady=10)
-
-        def calculate():
-            theta = theta_input.get()
-            radius = radius_input.get()
-            area = calculate_area(theta, radius)
-            if area is None:
-                messagebox.showerror("Error", "Please enter valid numeric values!")
-            else:
-                result_label.config(text=f"Area: {area}")
-                if tutorial_checkbox_var.get():
-                    steps = tutorial(theta, radius)
-                    messagebox.showinfo("Tutorial", steps)
-
-        tutorial_checkbox_var = tk.BooleanVar()
-        tutorial_checkbox = tk.Checkbutton(self.root, text="Show tutorial", variable=tutorial_checkbox_var)
-        tutorial_checkbox.pack(pady=5)
-
-        calculate_button = tk.Button(self.root, text="Calculate", command=calculate, bg="yellow")
-        calculate_button.pack(pady=10)
-
-    def clear_frame(self):
-        for widget in self.root.winfo_children():
-            widget.destroy()
-
-
-# Run the application
-root = tk.Tk()
-root.geometry("400x400")
-app = SectorCalculatorApp(root)
-root.mainloop()
+if __name__ == '__main__':
+    SectorCalculatorApp().run()
