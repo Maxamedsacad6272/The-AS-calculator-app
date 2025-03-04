@@ -2,7 +2,7 @@
 
 
 # (str) Title of your application
-title = Sector Area CL
+title = Kivy calculator
 
 # (str) Package name
 package.name = com.blogspot.mascofficial
